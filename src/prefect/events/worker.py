@@ -10,6 +10,7 @@ from prefect.settings import (
     PREFECT_API_KEY,
     PREFECT_API_URL,
     PREFECT_CLOUD_API_URL,
+    PREFECT_EVENTS_MAXIMUM_RELATED_RESOURCES,
 )
 from prefect.utilities.context import temporary_context
 
@@ -113,9 +114,13 @@ class EventsWorker(QueueService[Event]):
             return
 
         exclude = {resource.id for resource in event.involved_resources}
-        event.related += await related_resources_from_run_context(
-            client=self._orchestration_client, exclude=exclude
-        )
+        maximum_related_resources = PREFECT_EVENTS_MAXIMUM_RELATED_RESOURCES.value()
+        remaining_capacity = max(maximum_related_resources - len(event.related), 0)
+        event.related += (
+            await related_resources_from_run_context(
+                client=self._orchestration_client, exclude=exclude
+            )
+        )[:remaining_capacity]
 
     @classmethod
     def set_client_override(

@@ -10,10 +10,12 @@ from prefect.events.clients import (
     AssertingEventsClient,
     PrefectEventsClient,
 )
+from prefect.events.schemas.events import RelatedResource
 from prefect.events.utilities import emit_event
 from prefect.events.worker import EventsWorker, ProcessPoolForwardingEventsClient
 from prefect.settings import (
     PREFECT_API_URL,
+    PREFECT_EVENTS_MAXIMUM_RELATED_RESOURCES,
     temporary_settings,
 )
 
@@ -91,6 +93,42 @@ def test_worker_instance_uses_client_override(monkeypatch: pytest.MonkeyPatch):
         ProcessPoolForwardingEventsClient,
         (("event_queue", queue_marker), ("item_type", "event")),
     )
+
+
+async def test_preserves_user_related_resources_at_the_maximum(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def related_resources_from_context(*args, **kwargs):
+        return [
+            RelatedResource(
+                {
+                    "prefect.resource.id": "prefect.flow-run.context",
+                    "prefect.resource.role": "flow-run",
+                }
+            )
+        ]
+
+    monkeypatch.setattr(
+        "prefect.events.worker.related_resources_from_run_context",
+        related_resources_from_context,
+    )
+    worker = EventsWorker.__new__(EventsWorker)
+    worker._orchestration_client = MagicMock()
+    event = Event(
+        event="vogon.poetry.read",
+        resource={"prefect.resource.id": "poem.oh-freddled-gruntbuggly"},
+        related=[
+            {
+                "prefect.resource.id": "poem.related",
+                "prefect.resource.role": "related",
+            }
+        ],
+    )
+
+    with temporary_settings(updates={PREFECT_EVENTS_MAXIMUM_RELATED_RESOURCES: 1}):
+        await worker.attach_related_resources_from_context(event)
+
+    assert [resource.id for resource in event.related] == ["poem.related"]
 
 
 async def test_includes_related_resources_from_run_context(
