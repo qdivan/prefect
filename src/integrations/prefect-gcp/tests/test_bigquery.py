@@ -8,6 +8,7 @@ from google.cloud.bigquery.format_options import ParquetOptions
 from prefect_gcp.bigquery import (
     BigQueryWarehouse,
     _build_load_job_config,
+    abigquery_query,
     bigquery_create_table,
     bigquery_insert_stream,
     bigquery_load_cloud_storage,
@@ -52,6 +53,60 @@ def test_bigquery_query(
                 assert result == ("test_transformer",)
             else:
                 assert result == ["query"]
+
+
+@pytest.mark.parametrize(("dry_run", "use_query_cache"), [(False, True), (True, False)])
+def test_bigquery_query_restores_dry_run_config_after_size_limit_exceeded(
+    dry_run, use_query_cache
+):
+    client = MagicMock()
+    client.query.return_value.total_bytes_processed = 10
+    credentials = MagicMock()
+    credentials.get_bigquery_client.return_value = client
+
+    with pytest.raises(RuntimeError, match="above the set maximum"):
+        bigquery_query.fn(
+            "query",
+            credentials,
+            dry_run_max_bytes=5,
+            job_config={
+                "dry_run": dry_run,
+                "use_query_cache": use_query_cache,
+            },
+        )
+
+    job_config = client.query.call_args.kwargs["job_config"]
+    assert job_config.dry_run is dry_run
+    assert job_config.use_query_cache is use_query_cache
+
+
+@pytest.mark.parametrize(("dry_run", "use_query_cache"), [(False, True), (True, False)])
+async def test_abigquery_query_restores_dry_run_config_after_size_limit_exceeded(
+    dry_run, use_query_cache
+):
+    client = MagicMock()
+    client.query.return_value.total_bytes_processed = 10
+    credentials = MagicMock()
+    credentials.get_bigquery_client.return_value = client
+
+    @flow
+    async def test_flow():
+        await abigquery_query.fn(
+            "query",
+            credentials,
+            dry_run_max_bytes=5,
+            job_config={
+                "dry_run": dry_run,
+                "use_query_cache": use_query_cache,
+            },
+        )
+
+    with pytest.raises(RuntimeError, match="above the set maximum"):
+        await test_flow()
+
+    job_config = client.query.call_args.kwargs["job_config"]
+    assert job_config.dry_run is dry_run
+    assert job_config.use_query_cache is use_query_cache
 
 
 def test_bigquery_create_table(gcp_credentials):
