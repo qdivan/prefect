@@ -184,7 +184,7 @@ export function FlowRunHeader({ flowRun, onDeleteClick }: FlowRunHeaderProps) {
 								</Badge>
 							)}
 							{flowRun.tags && flowRun.tags.length > 0 && (
-								<div className="ml-2 shrink-0">
+								<div className="ml-2 min-w-12 flex">
 									<TagBadgeGroup tags={flowRun.tags} maxTagsDisplayed={3} />
 								</div>
 							)}
@@ -206,7 +206,11 @@ export function FlowRunHeader({ flowRun, onDeleteClick }: FlowRunHeaderProps) {
 					<div className="flex items-center gap-1">
 						<Icon id="Clock" className="size-4" />
 						<span>
-							{secondsToApproximateString(flowRun.total_run_time ?? 0)}
+							{secondsToApproximateString(
+								isRunningState(flowRun.state_type)
+									? (flowRun.estimated_run_time ?? 0)
+									: (flowRun.total_run_time ?? 0),
+							)}
 						</span>
 					</div>
 					<div
@@ -272,6 +276,7 @@ export function FlowRunHeader({ flowRun, onDeleteClick }: FlowRunHeaderProps) {
 				<DropdownMenuTrigger asChild>
 					<Button variant="outline" className="p-2">
 						<MoreVertical className="w-4 h-4" />
+						<span className="sr-only">Open menu</span>
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent>

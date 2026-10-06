@@ -673,7 +673,9 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
         self._cleanup_handler_registry = build_cleanup_handler_registry(self)
 
         self._prefetch_seconds: float = (
-            prefetch_seconds or PREFECT_WORKER_PREFETCH_SECONDS.value()
+            prefetch_seconds
+            if prefetch_seconds is not None
+            else PREFECT_WORKER_PREFETCH_SECONDS.value()
         )
         self.heartbeat_interval_seconds: int = (
             heartbeat_interval_seconds or PREFECT_WORKER_HEARTBEAT_SECONDS.value()
@@ -691,6 +693,7 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
         self._limiter: Optional[anyio.CapacityLimiter] = None
         self._draining = False
         self._submitting_flow_run_ids: set[UUID] = set()
+        self._in_flight_flow_run_ids: set[UUID] = set()
         self._scheduled_task_scopes: set[anyio.CancelScope] = set()
         self._worker_channel: Optional[WorkerChannel] = None
         self._has_successfully_synced = False
@@ -894,7 +897,10 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
                     while self._has_in_flight_flow_runs():
                         self._logger.debug(
                             "Waiting for %s active run(s) to finish before shutdown...",
-                            len(self._submitting_flow_run_ids),
+                            len(
+                                self._submitting_flow_run_ids
+                                | self._in_flight_flow_run_ids
+                            ),
                         )
                         await anyio.sleep(0.1)
 
@@ -946,13 +952,19 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
                     self._loops_task_group = None
                     self._drain_event = None
 
-                # If running once, wait for active runs to finish before teardown
-                if (run_once or self._draining) and self._limiter:
-                    # Use the limiter's borrowed token count as the source of truth
-                    while self.limiter.borrowed_tokens > 0:
+                # If running once or draining, wait for active runs before teardown
+                if run_once or self._draining:
+                    while self._has_in_flight_flow_runs():
+                        active_run_count = len(
+                            self._submitting_flow_run_ids | self._in_flight_flow_run_ids
+                        )
+                        if self._limiter:
+                            active_run_count = max(
+                                active_run_count, self._limiter.borrowed_tokens
+                            )
                         self._logger.debug(
                             "Waiting for %s active run(s) to finish before shutdown...",
-                            self.limiter.borrowed_tokens,
+                            active_run_count,
                         )
                         await anyio.sleep(0.1)
         finally:
@@ -1193,7 +1205,18 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
             worker_id=self.backend_id,
         )
 
-        bundle_result = create_bundle_for_flow_run(flow=flow, flow_run=flow_run)
+        try:
+            bundle_result = create_bundle_for_flow_run(flow=flow, flow_run=flow_run)
+        except Exception as exc:
+            logger.exception(
+                "Failed to create execution bundle for flow run '%s'.", flow_run.id
+            )
+            message = (
+                f"Flow run bundle could not be created: {type(exc).__name__}: {exc}"
+            )
+            await self._propose_crashed_state(flow_run, message, client=self.client)
+            return
+
         bundle = bundle_result["bundle"]
         zip_path = bundle_result["zip_path"]
 
@@ -1337,7 +1360,7 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
 
         seconds_since_last_poll = (
             prefect.types._datetime.now("UTC") - self._last_polled_time
-        ).seconds
+        ).total_seconds()
 
         is_still_polling = seconds_since_last_poll <= threshold_seconds
 
@@ -1353,8 +1376,10 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
         return is_still_polling
 
     def _has_in_flight_flow_runs(self) -> bool:
-        return bool(self._submitting_flow_run_ids) or bool(
-            self._limiter and self._limiter.borrowed_tokens > 0
+        return (
+            bool(self._submitting_flow_run_ids)
+            or bool(self._in_flight_flow_run_ids)
+            or bool(self._limiter and self._limiter.borrowed_tokens > 0)
         )
 
     async def get_and_submit_flow_runs(self) -> list["FlowRun"]:
@@ -1627,6 +1652,7 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
                     f"Flow run {flow_run.id} will not be submitted for"
                     " execution"
                 )
+                self._release_limit_slot(flow_run.id)
                 self._submitting_flow_run_ids.remove(flow_run.id)
                 if self._cancelling_observer is not None:
                     self._cancelling_observer.remove_in_flight_flow_run_id(flow_run.id)
@@ -1637,6 +1663,15 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
                     ),
                 )
                 return
+
+        # A queued submission may start after drain, or drain may begin during
+        # deployment lookup. Once Pending is accepted, continue the submission.
+        if self._draining:
+            self._release_limit_slot(flow_run.id)
+            self._submitting_flow_run_ids.discard(flow_run.id)
+            if self._cancelling_observer is not None:
+                self._cancelling_observer.remove_in_flight_flow_run_id(flow_run.id)
+            return
 
         ready_to_submit = await self._propose_pending_state(flow_run)
         self._logger.debug(f"Ready to submit {flow_run.id}: {ready_to_submit}")
@@ -1678,80 +1713,88 @@ class BaseWorker(abc.ABC, Generic[C, V, R]):
         flow_run: "FlowRun",
         task_status: anyio.abc.TaskStatus[int | Exception] | None = None,
     ) -> BaseWorkerResult | Exception:
-        run_logger = self.get_flow_run_logger(flow_run)
-
+        # Submission bookkeeping ends once infrastructure starts; drain must wait
+        # until monitoring and final state/event reporting finish as well.
+        self._in_flight_flow_run_ids.add(flow_run.id)
         try:
-            # Freeze a local copy of the work pool so a mid-flight snapshot
-            # apply cannot retemplate the configuration we're building.
-            work_pool = copy.deepcopy(self.work_pool)
-            configuration = await self.job_configuration.resolve_for_flow_run(
-                flow_run,
-                client=self.client,
-                work_pool=work_pool,
-                worker_name=self.name,
-                worker_id=self.backend_id,
-            )
+            run_logger = self.get_flow_run_logger(flow_run)
 
-            await self._give_worker_labels_to_flow_run(flow_run.id)
+            try:
+                # Freeze a local copy of the work pool so a mid-flight snapshot
+                # apply cannot retemplate the configuration we're building.
+                work_pool = copy.deepcopy(self.work_pool)
+                configuration = await self.job_configuration.resolve_for_flow_run(
+                    flow_run,
+                    client=self.client,
+                    work_pool=work_pool,
+                    worker_name=self.name,
+                    worker_id=self.backend_id,
+                )
 
-            await self._propose_submitting_state(flow_run)
+                await self._give_worker_labels_to_flow_run(flow_run.id)
 
-            submitted_event = self._emit_flow_run_submitted_event(configuration)
-            result = await self.run(
-                flow_run=flow_run,
-                task_status=task_status,
-                configuration=configuration,
-            )
-        except Exception as exc:
+                await self._propose_submitting_state(flow_run)
+
+                submitted_event = self._emit_flow_run_submitted_event(configuration)
+                result = await self.run(
+                    flow_run=flow_run,
+                    task_status=task_status,
+                    configuration=configuration,
+                )
+            except Exception as exc:
+                if task_status and not getattr(task_status, "_future").done():
+                    # This flow run was being submitted and did not start successfully
+                    run_logger.exception(
+                        f"Failed to submit flow run '{flow_run.name}' to infrastructure."
+                    )
+                    # Mark the task as started to prevent agent crash
+                    task_status.started(exc)
+                    message = f"Failed to submit flow run to infrastructure: {type(exc).__name__}: {exc}"
+                    await self._propose_crashed_state(flow_run, message)
+                else:
+                    run_logger.exception(
+                        f"Lost connection to flow run '{flow_run.name}' infrastructure."
+                        " The flow run's final state will be determined by the execution"
+                        " environment."
+                    )
+                return exc
+            finally:
+                self._release_limit_slot(flow_run.id)
+
             if task_status and not getattr(task_status, "_future").done():
-                # This flow run was being submitted and did not start successfully
-                run_logger.exception(
-                    f"Failed to submit flow run '{flow_run.name}' to infrastructure."
+                run_logger.error(
+                    f"Infrastructure returned without reporting flow run '{flow_run.id}' "
+                    "as started or raising an error. This behavior is not expected and "
+                    "generally indicates improper implementation of infrastructure. The "
+                    "flow run will not be marked as failed, but an issue may have occurred."
                 )
                 # Mark the task as started to prevent agent crash
-                task_status.started(exc)
-                message = f"Failed to submit flow run to infrastructure: {type(exc).__name__}: {exc}"
-                await self._propose_crashed_state(flow_run, message)
-            else:
-                run_logger.exception(
-                    f"Lost connection to flow run '{flow_run.name}' infrastructure."
-                    " The flow run's final state will be determined by the execution"
-                    " environment."
+                task_status.started(
+                    RuntimeError(
+                        "Infrastructure returned without reporting flow run as started or raising an error."
+                    )
                 )
-            return exc
+
+            if result.status_code != 0:
+                info = get_infrastructure_exit_info(result.status_code)
+                await self._propose_crashed_state(
+                    flow_run,
+                    (
+                        "Flow run infrastructure exited with non-zero status code"
+                        f" {result.status_code}. {info.explanation}"
+                    ),
+                )
+                if info.resolution:
+                    run_logger.info(info.resolution)
+
+            if submitted_event:
+                self._emit_flow_run_executed_event(
+                    result, configuration, submitted_event
+                )
+
+            return result
         finally:
-            self._release_limit_slot(flow_run.id)
-
-        if task_status and not getattr(task_status, "_future").done():
-            run_logger.error(
-                f"Infrastructure returned without reporting flow run '{flow_run.id}' "
-                "as started or raising an error. This behavior is not expected and "
-                "generally indicates improper implementation of infrastructure. The "
-                "flow run will not be marked as failed, but an issue may have occurred."
-            )
-            # Mark the task as started to prevent agent crash
-            task_status.started(
-                RuntimeError(
-                    "Infrastructure returned without reporting flow run as started or raising an error."
-                )
-            )
-
-        if result.status_code != 0:
-            info = get_infrastructure_exit_info(result.status_code)
-            await self._propose_crashed_state(
-                flow_run,
-                (
-                    "Flow run infrastructure exited with non-zero status code"
-                    f" {result.status_code}. {info.explanation}"
-                ),
-            )
-            if info.resolution:
-                run_logger.info(info.resolution)
-
-        if submitted_event:
-            self._emit_flow_run_executed_event(result, configuration, submitted_event)
-
-        return result
+            self._in_flight_flow_run_ids.discard(flow_run.id)
 
     def _release_limit_slot(self, flow_run_id: UUID) -> None:
         """

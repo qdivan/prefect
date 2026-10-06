@@ -47,6 +47,7 @@ describe("FlowRunHeader", () => {
 		state_name: "Completed",
 		start_time: "2025-05-15T09:45:46Z",
 		total_run_time: 7,
+		estimated_run_time: 0,
 		state: createFakeState({
 			type: "COMPLETED",
 			name: "Completed",
@@ -197,7 +198,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -235,7 +236,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		const copyToNewRunLink = await screen.findByRole("menuitem", {
@@ -275,7 +276,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -293,7 +294,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -319,7 +320,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -654,7 +655,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -677,7 +678,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -708,7 +709,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -737,7 +738,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -761,7 +762,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {
@@ -787,7 +788,7 @@ describe("FlowRunHeader", () => {
 			expect(screen.getByText("test-flow-run")).toBeInTheDocument();
 		});
 
-		const moreButton = screen.getByRole("button", { expanded: false });
+		const moreButton = screen.getByRole("button", { name: "Open menu" });
 		await user.click(moreButton);
 
 		await waitFor(() => {

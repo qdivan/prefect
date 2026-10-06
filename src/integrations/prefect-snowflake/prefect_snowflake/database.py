@@ -74,7 +74,7 @@ class SnowflakeConnector(DatabaseBlock):
     """  # noqa
 
     _block_type_name = "Snowflake Connector"
-    _logo_url = "https://cdn.sanity.io/images/3ugk85nk/production/bd359de0b4be76c2254bd329fe3a267a1a3879c2-250x250.png"  # noqa
+    _logo_url = "https://raw.githubusercontent.com/PrefectHQ/prefect/420d0d6a78bb6df1fc18bcf188fdad43c1d22ea9/assets/block-logos/snowflake.png"  # noqa
     _documentation_url = "https://docs.prefect.io/integrations/prefect-snowflake"  # noqa
     _description = "Perform data operations against a Snowflake database."
 
@@ -794,12 +794,15 @@ class SnowflakeConnector(DatabaseBlock):
         try:
             self.reset_cursors()
         finally:
+            # No `return` in here: returning out of a `finally` block discards
+            # whatever exception `reset_cursors` was raising, so a failed cursor
+            # reset used to look like a clean close to the caller.
             if self._connection is None:
                 self.logger.info("There was no connection open to be closed.")
-                return
-            self._connection.close()
-            self._connection = None
-            self.logger.info("Successfully closed the Snowflake connection.")
+            else:
+                self._connection.close()
+                self._connection = None
+                self.logger.info("Successfully closed the Snowflake connection.")
 
     def __enter__(self):
         """

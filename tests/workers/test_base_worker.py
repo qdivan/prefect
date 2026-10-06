@@ -56,6 +56,7 @@ from prefect.client.schemas.worker_channel import (
     WorkPoolSnapshotPayload,
 )
 from prefect.context import FlowRunContext, TagsContext
+from prefect.events import Event
 from prefect.exceptions import (
     CrashedRun,
     ObjectAlreadyExists,
@@ -453,6 +454,15 @@ async def test_worker_respects_prefetch_seconds():
         ]["prefetch_seconds"]
         == get_current_settings().worker.prefetch_seconds
     )
+
+
+async def test_worker_respects_a_prefetch_seconds_of_zero():
+    """0 means no lookahead, and the CLI resolves it with an is-None check, so the
+    worker must not fall back to the setting default."""
+    worker = WorkerTestImpl(
+        name="test", work_pool_name="test-work-pool", prefetch_seconds=0
+    )
+    assert worker.get_status()["settings"]["prefetch_seconds"] == 0
 
 
 async def test_worker_sends_heartbeat_messages(
@@ -871,12 +881,19 @@ async def test_base_worker_drain_stops_polling_without_cancelling_active_runs(
         await active_run_finished.wait()
 
 
+@pytest.mark.parametrize("tracking", ["submitting", "active"])
 async def test_base_worker_drain_stops_polling_but_continues_sync_until_active_runs_finish(
     work_pool: WorkPool,
+    tracking: str,
 ):
     worker = WorkerTestImpl(
         work_pool_name=work_pool.name,
         heartbeat_interval_seconds=0.01,
+    )
+    tracked_runs = (
+        worker._submitting_flow_run_ids
+        if tracking == "submitting"
+        else worker._in_flight_flow_run_ids
     )
     flow_run_id = uuid.uuid4()
     polled = anyio.Event()
@@ -888,7 +905,7 @@ async def test_base_worker_drain_stops_polling_but_continues_sync_until_active_r
     async def get_and_submit_flow_runs() -> list[FlowRun]:
         nonlocal poll_count
         poll_count += 1
-        worker._submitting_flow_run_ids.add(flow_run_id)
+        tracked_runs.add(flow_run_id)
         polled.set()
         worker._request_drain()
         return []
@@ -896,10 +913,10 @@ async def test_base_worker_drain_stops_polling_but_continues_sync_until_active_r
     async def sync_and_initialize() -> None:
         worker._work_pool = work_pool
         worker._has_successfully_synced = True
-        if worker._draining and flow_run_id in worker._submitting_flow_run_ids:
+        if worker._draining and flow_run_id in tracked_runs:
             synced_while_draining.set()
             await release_active_run.wait()
-            worker._submitting_flow_run_ids.remove(flow_run_id)
+            tracked_runs.remove(flow_run_id)
 
     worker.get_and_submit_flow_runs = get_and_submit_flow_runs
     worker._sync_and_initialize = sync_and_initialize
@@ -959,7 +976,261 @@ async def test_base_worker_drain_stops_iterating_fetched_batch(
     assert [flow_run.id for flow_run in submitted_flow_runs] == [flow_runs[0].id]
 
 
+@pytest.mark.parametrize("limit", [None, 1])
+@pytest.mark.parametrize("outcome", ["completed", "error", "cancelled"])
+async def test_base_worker_tracks_started_run_until_exit(
+    limit: int | None,
+    outcome: str,
+    prefect_client: PrefectClient,
+    worker_deployment_infra_wq1: WorkQueue,
+    work_pool: WorkPool,
+):
+    flow_run = await prefect_client.create_flow_run_from_deployment(
+        worker_deployment_infra_wq1.id,
+        state=Scheduled(scheduled_time=now_fn("UTC") - timedelta(days=1)),
+    )
+    release_run = anyio.Event()
+    run_exited = anyio.Event()
+
+    async def run(
+        flow_run: FlowRun,
+        configuration: BaseJobConfiguration,
+        task_status: anyio.abc.TaskStatus,
+    ) -> BaseWorkerResult:
+        task_status.started("test-pid")
+        try:
+            await release_run.wait()
+            if outcome == "error":
+                raise RuntimeError("Infrastructure connection lost")
+        finally:
+            run_exited.set()
+        return BaseWorkerResult(status_code=0, identifier="test-pid")
+
+    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=limit) as worker:
+        worker._work_pool = work_pool
+        worker.run = run
+        worker._submitting_flow_run_ids.add(flow_run.id)
+        if worker._limiter:
+            worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
+        await worker._submit_run(flow_run)
+        try:
+            assert flow_run.id not in worker._submitting_flow_run_ids
+            assert not run_exited.is_set()
+            worker._request_drain()
+            assert worker._has_in_flight_flow_runs()
+        finally:
+            if outcome == "cancelled":
+                assert worker._runs_task_group is not None
+                worker._runs_task_group.cancel_scope.cancel()
+            else:
+                release_run.set()
+
+    assert run_exited.is_set()
+    assert not worker._has_in_flight_flow_runs()
+    assert not worker._submitting_flow_run_ids
+    assert worker._limiter is None or worker.limiter.borrowed_tokens == 0
+
+
+@pytest.mark.parametrize("limit", [None, 1])
+@pytest.mark.parametrize("failure_at", ["configuration", "run"])
+async def test_base_worker_cleans_up_tracking_when_submission_fails(
+    limit: int | None,
+    failure_at: str,
+    prefect_client: PrefectClient,
+    worker_deployment_infra_wq1: WorkQueue,
+    work_pool: WorkPool,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    flow_run = await prefect_client.create_flow_run_from_deployment(
+        worker_deployment_infra_wq1.id,
+    )
+    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=limit) as worker:
+        worker._work_pool = work_pool
+        failure = AsyncMock(side_effect=RuntimeError("Submission failed"))
+        if failure_at == "configuration":
+            monkeypatch.setattr(BaseJobConfiguration, "resolve_for_flow_run", failure)
+        else:
+            worker.run = failure
+        worker._submitting_flow_run_ids.add(flow_run.id)
+        if worker._limiter:
+            worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
+        await worker._submit_run(flow_run)
+
+    assert not worker._has_in_flight_flow_runs()
+    assert not worker._submitting_flow_run_ids
+    assert worker._limiter is None or worker.limiter.borrowed_tokens == 0
+    updated_run = await prefect_client.read_flow_run(flow_run.id)
+    assert updated_run.state is not None
+    assert updated_run.state.is_crashed()
+
+
+@pytest.mark.parametrize("limit", [None, 1])
+async def test_base_worker_run_once_waits_for_started_run_before_stopped_event(
+    limit: int | None,
+    prefect_client: PrefectClient,
+    worker_deployment_infra_wq1: WorkQueue,
+    work_pool: WorkPool,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    flow_run = await prefect_client.create_flow_run_from_deployment(
+        worker_deployment_infra_wq1.id,
+    )
+    worker = WorkerTestImpl(work_pool_name=work_pool.name, limit=limit)
+    submitted = anyio.Event()
+    release = anyio.Event()
+    finished = anyio.Event()
+    shutdown_boundary = anyio.Event()
+
+    async def run(
+        flow_run: FlowRun,
+        configuration: BaseJobConfiguration,
+        task_status: anyio.abc.TaskStatus,
+    ) -> BaseWorkerResult:
+        task_status.started("test-pid")
+        await release.wait()
+        finished.set()
+        return BaseWorkerResult(status_code=0, identifier="test-pid")
+
+    async def poll() -> list[FlowRun]:
+        worker._submitting_flow_run_ids.add(flow_run.id)
+        if worker._limiter:
+            worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
+        await worker._submit_run(flow_run)
+        submitted.set()
+        return [flow_run]
+
+    observations: list[bool] = []
+    emit_stopped = worker._emit_worker_stopped_event
+
+    has_in_flight = worker._has_in_flight_flow_runs
+
+    def observe_shutdown_wait() -> bool:
+        shutdown_boundary.set()
+        return has_in_flight()
+
+    async def stopped(started_event: Event) -> None:
+        observations.append(finished.is_set())
+        shutdown_boundary.set()
+        await emit_stopped(started_event)
+
+    monkeypatch.setattr(worker, "_has_in_flight_flow_runs", observe_shutdown_wait)
+    monkeypatch.setattr(worker, "run", run)
+    monkeypatch.setattr(worker, "get_and_submit_flow_runs", poll)
+    monkeypatch.setattr(worker, "_emit_worker_stopped_event", stopped)
+
+    with anyio.fail_after(10):
+        async with anyio.create_task_group() as tasks:
+            tasks.start_soon(worker.start, True)
+            await submitted.wait()
+            await shutdown_boundary.wait()
+            release.set()
+
+    assert observations == [True]
+    assert finished.is_set()
+    assert not worker._has_in_flight_flow_runs()
+
+
+@pytest.mark.parametrize("limit", [None, 1])
+async def test_base_worker_missing_deployment_releases_slot_before_drain(
+    limit: int | None,
+    prefect_client: PrefectClient,
+    worker_deployment_infra_wq1: WorkQueue,
+    work_pool: WorkPool,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    flow_run = await prefect_client.create_flow_run_from_deployment(
+        worker_deployment_infra_wq1.id,
+    )
+    await prefect_client.delete_deployment(worker_deployment_infra_wq1.id)
+    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=limit) as worker:
+        worker._work_pool = work_pool
+        worker._submitting_flow_run_ids.add(flow_run.id)
+        if worker._limiter:
+            worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
+        observer = MagicMock()
+        worker._cancelling_observer = observer
+        claim = AsyncMock(wraps=worker._propose_pending_state)
+        run = AsyncMock()
+        monkeypatch.setattr(worker, "_propose_pending_state", claim)
+        monkeypatch.setattr(worker, "run", run)
+        worker._request_drain()
+
+        await worker._submit_run(flow_run)
+
+        assert not worker._submitting_flow_run_ids
+        assert worker._limiter is None or worker.limiter.borrowed_tokens == 0
+        assert not worker._has_in_flight_flow_runs()
+        observer.remove_in_flight_flow_run_id.assert_called_once_with(flow_run.id)
+        claim.assert_not_awaited()
+        run.assert_not_awaited()
+
+    # Deleting a deployment also deletes its Scheduled runs. The worker still
+    # owns a stale fetched run and must release its local capacity on this path.
+    with pytest.raises(ObjectNotFound):
+        await prefect_client.read_flow_run(flow_run.id)
+
+
+@pytest.mark.parametrize("limit", [None, 1])
+@pytest.mark.parametrize("drain_at", ["queued", "deployment_lookup"])
+async def test_base_worker_drain_before_pending_claim_skips_scheduled_run(
+    limit: int | None,
+    drain_at: str,
+    prefect_client: PrefectClient,
+    worker_deployment_infra_wq1: WorkQueue,
+    work_pool: WorkPool,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    flow_run = await prefect_client.create_flow_run_from_deployment(
+        worker_deployment_infra_wq1.id,
+        state=Scheduled(scheduled_time=now_fn("UTC") - timedelta(days=1)),
+    )
+    run_mock = AsyncMock(
+        return_value=BaseWorkerResult(status_code=0, identifier="test-run")
+    )
+
+    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=limit) as worker:
+        worker._work_pool = work_pool
+        worker.run = run_mock
+        worker._submitting_flow_run_ids.add(flow_run.id)
+        if worker._limiter:
+            worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
+
+        observer = MagicMock()
+        worker._cancelling_observer = observer
+        claim = AsyncMock(wraps=worker._propose_pending_state)
+        monkeypatch.setattr(worker, "_propose_pending_state", claim)
+        read_deployment = worker.client.read_deployment
+
+        async def drain_during_deployment_lookup(
+            deployment_id: uuid.UUID,
+        ) -> Any:
+            deployment = await read_deployment(deployment_id)
+            worker._request_drain()
+            return deployment
+
+        if drain_at == "queued":
+            assert worker._runs_task_group is not None
+            worker._runs_task_group.start_soon(worker._submit_run, flow_run)
+            worker._request_drain()
+        else:
+            monkeypatch.setattr(
+                worker.client, "read_deployment", drain_during_deployment_lookup
+            )
+            await worker._submit_run(flow_run)
+
+    claim.assert_not_awaited()
+    run_mock.assert_not_called()
+    assert flow_run.id not in worker._submitting_flow_run_ids
+    assert worker._limiter is None or worker.limiter.borrowed_tokens == 0
+    observer.remove_in_flight_flow_run_id.assert_called_once_with(flow_run.id)
+    updated_flow_run = await prefect_client.read_flow_run(flow_run.id)
+    assert updated_flow_run.state is not None
+    assert updated_flow_run.state.type == StateType.SCHEDULED
+
+
+@pytest.mark.parametrize("limit", [None, 1])
 async def test_base_worker_drain_after_pending_continues_submission(
+    limit: int | None,
     prefect_client: PrefectClient,
     worker_deployment_infra_wq1: WorkQueue,
     work_pool: WorkPool,
@@ -972,11 +1243,12 @@ async def test_base_worker_drain_after_pending_continues_submission(
         return_value=BaseWorkerResult(status_code=0, identifier="test-run")
     )
 
-    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=1) as worker:
+    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=limit) as worker:
         worker._work_pool = work_pool
         worker.run = run_mock
         worker._submitting_flow_run_ids.add(flow_run.id)
-        worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
+        if worker._limiter:
+            worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
         propose_pending_state = worker._propose_pending_state
 
         async def drain_after_pending(flow_run: FlowRun) -> bool:
@@ -990,14 +1262,16 @@ async def test_base_worker_drain_after_pending_continues_submission(
 
     run_mock.assert_called_once()
     assert flow_run.id not in worker._submitting_flow_run_ids
-    assert worker.limiter.borrowed_tokens == 0
+    assert worker._limiter is None or worker.limiter.borrowed_tokens == 0
     updated_flow_run = await prefect_client.read_flow_run(flow_run.id)
     assert updated_flow_run.state is not None
     assert updated_flow_run.state.type == StateType.PENDING
     assert updated_flow_run.state.name == "Submitting"
 
 
+@pytest.mark.parametrize("limit", [None, 1])
 async def test_base_worker_drain_after_pending_during_configuration_resolution_continues_submission(
+    limit: int | None,
     prefect_client: PrefectClient,
     worker_deployment_infra_wq1: WorkQueue,
     work_pool: WorkPool,
@@ -1012,7 +1286,7 @@ async def test_base_worker_drain_after_pending_during_configuration_resolution_c
         return_value=BaseWorkerResult(status_code=0, identifier="test-run")
     )
 
-    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=1) as worker:
+    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=limit) as worker:
 
         async def drain_during_configuration_resolution(
             *args: Any, **kwargs: Any
@@ -1028,13 +1302,14 @@ async def test_base_worker_drain_after_pending_during_configuration_resolution_c
         worker._work_pool = work_pool
         worker.run = run_mock
         worker._submitting_flow_run_ids.add(flow_run.id)
-        worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
+        if worker._limiter:
+            worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
 
         await worker._submit_run(flow_run)
 
     run_mock.assert_called_once()
     assert flow_run.id not in worker._submitting_flow_run_ids
-    assert worker.limiter.borrowed_tokens == 0
+    assert worker._limiter is None or worker.limiter.borrowed_tokens == 0
     updated_flow_run = await prefect_client.read_flow_run(flow_run.id)
     assert updated_flow_run.state is not None
     assert updated_flow_run.state.type == StateType.PENDING
@@ -1042,7 +1317,9 @@ async def test_base_worker_drain_after_pending_during_configuration_resolution_c
 
 
 @pytest.mark.parametrize("drain_after", ["labels", "submitting"])
+@pytest.mark.parametrize("limit", [None, 1])
 async def test_base_worker_drain_after_submission_awaits_continues_submission(
+    limit: int | None,
     drain_after: str,
     prefect_client: PrefectClient,
     worker_deployment_infra_wq1: WorkQueue,
@@ -1056,13 +1333,14 @@ async def test_base_worker_drain_after_submission_awaits_continues_submission(
         return_value=BaseWorkerResult(status_code=0, identifier="test-run")
     )
 
-    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=1) as worker:
+    async with WorkerTestImpl(work_pool_name=work_pool.name, limit=limit) as worker:
         worker._work_pool = work_pool
         worker.run = run_mock
         worker._emit_flow_run_submitted_event = Mock()
         worker._emit_flow_run_executed_event = Mock()
         worker._submitting_flow_run_ids.add(flow_run.id)
-        worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
+        if worker._limiter:
+            worker.limiter.acquire_on_behalf_of_nowait(flow_run.id)
 
         if drain_after == "labels":
 
@@ -1086,7 +1364,7 @@ async def test_base_worker_drain_after_submission_awaits_continues_submission(
     worker._emit_flow_run_submitted_event.assert_called_once()
     worker._emit_flow_run_executed_event.assert_called_once()
     assert flow_run.id not in worker._submitting_flow_run_ids
-    assert worker.limiter.borrowed_tokens == 0
+    assert worker._limiter is None or worker.limiter.borrowed_tokens == 0
     updated_flow_run = await prefect_client.read_flow_run(flow_run.id)
     assert updated_flow_run.state is not None
     assert updated_flow_run.state.type == StateType.PENDING
@@ -2687,12 +2965,21 @@ async def test_worker_last_polled_health_check(work_pool: WorkPool):
                 with travel_to(now + timedelta(minutes=30, seconds=1)):
                     resp = worker.is_worker_still_polling(query_interval_seconds=60)
                     assert resp is False
+
+                # a day-scale gap must not report healthy: timedelta.seconds
+                # discards the days component, so a worker dead for a day and
+                # 30 seconds used to pass the 300 second threshold again
+                with travel_to(now + timedelta(days=1, seconds=30)):
+                    resp = worker.is_worker_still_polling(query_interval_seconds=10)
+                    assert resp is False
     except ExceptionGroup as e:
         raise e.exceptions[0]
 
 
+@pytest.mark.parametrize("tracking", ["submitting", "active"])
 async def test_worker_health_check_allows_stale_poll_time_while_draining_active_run(
     work_pool: WorkPool,
+    tracking: str,
 ):
     now = now_fn("UTC")
 
@@ -2701,7 +2988,12 @@ async def test_worker_health_check_allows_stale_poll_time_while_draining_active_
             async with WorkerTestImpl(work_pool_name=work_pool.name) as worker:
                 worker._last_polled_time = now
                 worker._draining = True
-                worker._submitting_flow_run_ids.add(uuid.uuid4())
+                tracked_runs = (
+                    worker._submitting_flow_run_ids
+                    if tracking == "submitting"
+                    else worker._in_flight_flow_run_ids
+                )
+                tracked_runs.add(uuid.uuid4())
 
                 with travel_to(now + timedelta(seconds=301)):
                     assert worker.is_worker_still_polling(query_interval_seconds=10)
@@ -4976,6 +5268,45 @@ class TestSubmit:
 
         # Upload step should have been run
         mock_run_process.assert_called_once()
+
+    async def test_bundle_creation_failure_crashes_flow_run(
+        self,
+        work_pool: WorkPool,
+        prefect_client: PrefectClient,
+        tmp_path: Path,
+    ):
+        class BundleWorker(BaseWorker[BaseJobConfiguration, Any, BaseWorkerResult]):
+            type = "bundle-worker"
+            job_configuration = BaseJobConfiguration
+
+            async def run(
+                self,
+                flow_run: FlowRun,
+                configuration: BaseJobConfiguration,
+                task_status: anyio.abc.TaskStatus[int] | None = None,
+            ) -> BaseWorkerResult:
+                return BaseWorkerResult(identifier="test", status_code=0)
+
+        @flow
+        def test_flow() -> None:
+            pass
+
+        bound_flow = bind_flow_to_infrastructure(
+            flow=test_flow,
+            work_pool=work_pool.name,
+            worker_cls=BundleWorker,
+            include_files=["config.yaml"],
+            include_files_base_dir=tmp_path / "missing",
+        )
+        async with BundleWorker(work_pool_name=work_pool.name) as worker:
+            with pytest.warns(FutureWarning):
+                future = await worker.submit(bound_flow)
+
+        flow_run = await prefect_client.read_flow_run(future.flow_run_id)
+        assert flow_run.state is not None
+        assert flow_run.state.is_crashed()
+        assert flow_run.state.message is not None
+        assert "include_files_base_dir" in flow_run.state.message
 
     async def test_work_pool_is_missing_storage_configuration(
         self,

@@ -45,7 +45,7 @@ exports[`property.type > array > base 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -165,7 +165,7 @@ exports[`property.type > array > with enum items 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -196,38 +196,120 @@ exports[`property.type > array > with enum items 1`] = `
           </div>
         </div>
         <fieldset>
-          <button
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            aria-label="Select undefined"
-            class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background text-muted-foreground"
-            data-slot="popover-trigger"
-            data-state="closed"
-            id="generated-id-0"
-            type="button"
+          <div
+            class="flex flex-col gap-1"
           >
-            foo, bar
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-chevrons-up-down size-4 opacity-50"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-label="Select undefined"
+              class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
+              data-slot="popover-trigger"
+              data-state="closed"
+              id="generated-id-0"
+              type="button"
             >
-              <path
-                d="m7 15 5 5 5-5"
-              />
-              <path
-                d="m7 9 5-5 5 5"
-              />
-            </svg>
-          </button>
+              Select
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevrons-up-down size-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 15 5 5 5-5"
+                />
+                <path
+                  d="m7 9 5-5 5 5"
+                />
+              </svg>
+            </button>
+            <div
+              class="flex flex-wrap gap-1"
+            >
+              <span
+                class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90 ml-1 max-w-40"
+                data-slot="badge"
+                title="foo"
+              >
+                <span
+                  class="truncate"
+                >
+                  foo
+                </span>
+                <button
+                  aria-label="Remove foo tag"
+                  class="text-muted-foreground hover:text-foreground rounded-sm focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-x"
+                    fill="none"
+                    height="14"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="14"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M18 6 6 18"
+                    />
+                    <path
+                      d="m6 6 12 12"
+                    />
+                  </svg>
+                </button>
+              </span>
+              <span
+                class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90 ml-1 max-w-40"
+                data-slot="badge"
+                title="bar"
+              >
+                <span
+                  class="truncate"
+                >
+                  bar
+                </span>
+                <button
+                  aria-label="Remove bar tag"
+                  class="text-muted-foreground hover:text-foreground rounded-sm focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-x"
+                    fill="none"
+                    height="14"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="14"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M18 6 6 18"
+                    />
+                    <path
+                      d="m6 6 12 12"
+                    />
+                  </svg>
+                </button>
+              </span>
+            </div>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -280,7 +362,7 @@ exports[`property.type > array > with prefixItems - no drag handles on prefix it
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -351,7 +433,7 @@ exports[`property.type > array > with prefixItems - no drag handles on prefix it
                 </span>
                 <svg
                   aria-hidden="true"
-                  class="lucide lucide-ellipsis-vertical size-4"
+                  class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -424,7 +506,7 @@ exports[`property.type > array > with prefixItems - no drag handles on prefix it
                 </span>
                 <svg
                   aria-hidden="true"
-                  class="lucide lucide-ellipsis-vertical size-4"
+                  class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -541,7 +623,7 @@ exports[`property.type > array > with prefixItems - no drag handles on prefix it
                 </span>
                 <svg
                   aria-hidden="true"
-                  class="lucide lucide-ellipsis-vertical size-4"
+                  class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -658,7 +740,7 @@ exports[`property.type > array > with prefixItems - no drag handles on prefix it
                 </span>
                 <svg
                   aria-hidden="true"
-                  class="lucide lucide-ellipsis-vertical size-4"
+                  class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -767,7 +849,7 @@ exports[`property.type > array > with values - drag handles visible 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -890,7 +972,7 @@ exports[`property.type > array > with values - drag handles visible 1`] = `
                 </span>
                 <svg
                   aria-hidden="true"
-                  class="lucide lucide-ellipsis-vertical size-4"
+                  class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -1007,7 +1089,7 @@ exports[`property.type > array > with values - drag handles visible 1`] = `
                 </span>
                 <svg
                   aria-hidden="true"
-                  class="lucide lucide-ellipsis-vertical size-4"
+                  class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -1124,7 +1206,7 @@ exports[`property.type > array > with values - drag handles visible 1`] = `
                 </span>
                 <svg
                   aria-hidden="true"
-                  class="lucide lucide-ellipsis-vertical size-4"
+                  class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -1233,7 +1315,7 @@ exports[`property.type > boolean > base 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1332,7 +1414,7 @@ exports[`property.type > boolean > enum 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1363,38 +1445,42 @@ exports[`property.type > boolean > enum 1`] = `
           </div>
         </div>
         <fieldset>
-          <button
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            aria-label="Select undefined"
-            class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
-            data-slot="popover-trigger"
-            data-state="closed"
-            id="generated-id-0"
-            type="button"
+          <div
+            class="flex flex-col gap-1"
           >
-            Select
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-chevrons-up-down size-4 opacity-50"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-label="Select undefined"
+              class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
+              data-slot="popover-trigger"
+              data-state="closed"
+              id="generated-id-0"
+              type="button"
             >
-              <path
-                d="m7 15 5 5 5-5"
-              />
-              <path
-                d="m7 9 5-5 5 5"
-              />
-            </svg>
-          </button>
+              Select
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevrons-up-down size-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 15 5 5 5-5"
+                />
+                <path
+                  d="m7 9 5-5 5 5"
+                />
+              </svg>
+            </button>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -1447,7 +1533,7 @@ exports[`property.type > boolean > with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1546,7 +1632,7 @@ exports[`property.type > boolean > with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1645,7 +1731,7 @@ exports[`property.type > integer > base 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1735,7 +1821,7 @@ exports[`property.type > integer > enum 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1766,38 +1852,42 @@ exports[`property.type > integer > enum 1`] = `
           </div>
         </div>
         <fieldset>
-          <button
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            aria-label="Select undefined"
-            class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
-            data-slot="popover-trigger"
-            data-state="closed"
-            id="generated-id-0"
-            type="button"
+          <div
+            class="flex flex-col gap-1"
           >
-            Select
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-chevrons-up-down size-4 opacity-50"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-label="Select undefined"
+              class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
+              data-slot="popover-trigger"
+              data-state="closed"
+              id="generated-id-0"
+              type="button"
             >
-              <path
-                d="m7 15 5 5 5-5"
-              />
-              <path
-                d="m7 9 5-5 5 5"
-              />
-            </svg>
-          </button>
+              Select
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevrons-up-down size-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 15 5 5 5-5"
+                />
+                <path
+                  d="m7 9 5-5 5 5"
+                />
+              </svg>
+            </button>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -1850,7 +1940,7 @@ exports[`property.type > integer > with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1940,7 +2030,7 @@ exports[`property.type > integer > with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2030,7 +2120,7 @@ exports[`property.type > null > base 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2118,7 +2208,7 @@ exports[`property.type > number > base 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2208,7 +2298,7 @@ exports[`property.type > number > enum 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2239,38 +2329,42 @@ exports[`property.type > number > enum 1`] = `
           </div>
         </div>
         <fieldset>
-          <button
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            aria-label="Select undefined"
-            class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
-            data-slot="popover-trigger"
-            data-state="closed"
-            id="generated-id-0"
-            type="button"
+          <div
+            class="flex flex-col gap-1"
           >
-            Select
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-chevrons-up-down size-4 opacity-50"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-label="Select undefined"
+              class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
+              data-slot="popover-trigger"
+              data-state="closed"
+              id="generated-id-0"
+              type="button"
             >
-              <path
-                d="m7 15 5 5 5-5"
-              />
-              <path
-                d="m7 9 5-5 5 5"
-              />
-            </svg>
-          </button>
+              Select
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevrons-up-down size-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 15 5 5 5-5"
+                />
+                <path
+                  d="m7 9 5-5 5 5"
+                />
+              </svg>
+            </button>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -2323,7 +2417,7 @@ exports[`property.type > number > with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2413,7 +2507,7 @@ exports[`property.type > number > with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2503,7 +2597,7 @@ exports[`property.type > string >  1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2592,7 +2686,7 @@ exports[`property.type > string > enum 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2623,38 +2717,42 @@ exports[`property.type > string > enum 1`] = `
           </div>
         </div>
         <fieldset>
-          <button
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            aria-label="Select undefined"
-            class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
-            data-slot="popover-trigger"
-            data-state="closed"
-            id="generated-id-0"
-            type="button"
+          <div
+            class="flex flex-col gap-1"
           >
-            Select
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-chevrons-up-down size-4 opacity-50"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-label="Select undefined"
+              class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background"
+              data-slot="popover-trigger"
+              data-state="closed"
+              id="generated-id-0"
+              type="button"
             >
-              <path
-                d="m7 15 5 5 5-5"
-              />
-              <path
-                d="m7 9 5-5 5 5"
-              />
-            </svg>
-          </button>
+              Select
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevrons-up-down size-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 15 5 5 5-5"
+                />
+                <path
+                  d="m7 9 5-5 5 5"
+                />
+              </svg>
+            </button>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -2707,7 +2805,7 @@ exports[`property.type > string > enum with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2738,38 +2836,42 @@ exports[`property.type > string > enum with default 1`] = `
           </div>
         </div>
         <fieldset>
-          <button
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            aria-label="Select undefined"
-            class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background text-muted-foreground"
-            data-slot="popover-trigger"
-            data-state="closed"
-            id="generated-id-0"
-            type="button"
+          <div
+            class="flex flex-col gap-1"
           >
-            foo
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-chevrons-up-down size-4 opacity-50"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-label="Select undefined"
+              class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background text-muted-foreground"
+              data-slot="popover-trigger"
+              data-state="closed"
+              id="generated-id-0"
+              type="button"
             >
-              <path
-                d="m7 15 5 5 5-5"
-              />
-              <path
-                d="m7 9 5-5 5 5"
-              />
-            </svg>
-          </button>
+              foo
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevrons-up-down size-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 15 5 5 5-5"
+                />
+                <path
+                  d="m7 9 5-5 5 5"
+                />
+              </svg>
+            </button>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -2822,7 +2924,7 @@ exports[`property.type > string > enum with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2853,38 +2955,42 @@ exports[`property.type > string > enum with value 1`] = `
           </div>
         </div>
         <fieldset>
-          <button
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            aria-label="Select undefined"
-            class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background text-muted-foreground"
-            data-slot="popover-trigger"
-            data-state="closed"
-            id="generated-id-0"
-            type="button"
+          <div
+            class="flex flex-col gap-1"
           >
-            foo
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-chevrons-up-down size-4 opacity-50"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-label="Select undefined"
+              class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background text-muted-foreground"
+              data-slot="popover-trigger"
+              data-state="closed"
+              id="generated-id-0"
+              type="button"
             >
-              <path
-                d="m7 15 5 5 5-5"
-              />
-              <path
-                d="m7 9 5-5 5 5"
-              />
-            </svg>
-          </button>
+              foo
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevrons-up-down size-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 15 5 5 5-5"
+                />
+                <path
+                  d="m7 9 5-5 5 5"
+                />
+              </svg>
+            </button>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -2937,7 +3043,7 @@ exports[`property.type > string > format:date 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3063,7 +3169,7 @@ exports[`property.type > string > format:date with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3187,7 +3293,7 @@ exports[`property.type > string > format:date with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3311,7 +3417,7 @@ exports[`property.type > string > format:date-time 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3457,7 +3563,7 @@ exports[`property.type > string > format:date-time with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3601,7 +3707,7 @@ exports[`property.type > string > format:date-time with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3745,7 +3851,7 @@ exports[`property.type > string > format:json-string 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3831,7 +3937,7 @@ exports[`property.type > string > format:json-string with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3919,7 +4025,7 @@ exports[`property.type > string > format:json-string with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -4007,7 +4113,7 @@ exports[`property.type > string > with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -4098,7 +4204,7 @@ exports[`property.type > string > with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -4189,7 +4295,7 @@ exports[`property.type > unknown > base 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -4275,7 +4381,7 @@ exports[`property.type > unknown > with default 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -4361,7 +4467,7 @@ exports[`property.type > unknown > with value 1`] = `
               </span>
               <svg
                 aria-hidden="true"
-                class="lucide lucide-ellipsis-vertical size-4"
+                class="lucide lucide-ellipsis-vertical lucide-more-vertical size-4"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -4392,38 +4498,42 @@ exports[`property.type > unknown > with value 1`] = `
           </div>
         </div>
         <fieldset>
-          <button
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            aria-label="Select undefined"
-            class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background text-muted-foreground"
-            data-slot="popover-trigger"
-            data-state="closed"
-            id="generated-id-0"
-            type="button"
+          <div
+            class="flex flex-col gap-1"
           >
-            foo
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-chevrons-up-down size-4 opacity-50"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-label="Select undefined"
+              class="inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full justify-between bg-card dark:bg-background text-muted-foreground"
+              data-slot="popover-trigger"
+              data-state="closed"
+              id="generated-id-0"
+              type="button"
             >
-              <path
-                d="m7 15 5 5 5-5"
-              />
-              <path
-                d="m7 9 5-5 5 5"
-              />
-            </svg>
-          </button>
+              foo
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevrons-up-down size-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 15 5 5 5-5"
+                />
+                <path
+                  d="m7 9 5-5 5 5"
+                />
+              </svg>
+            </button>
+          </div>
         </fieldset>
       </div>
     </div>

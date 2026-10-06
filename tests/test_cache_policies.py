@@ -1,5 +1,9 @@
 import itertools
+import subprocess
+import sys
 from dataclasses import dataclass
+from pathlib import Path
+from types import ModuleType
 from typing import Callable
 from unittest.mock import MagicMock
 
@@ -117,6 +121,63 @@ class TestInputsPolicy:
 
         assert key != other_key
 
+    def test_key_registers_transforms_for_already_imported_modules(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        class FakeDataFrame:
+            def __init__(self, columns: dict[str, str]):
+                self._columns = columns
+
+            @property
+            def columns(self) -> list[str]:
+                return list(self._columns)
+
+            def __getitem__(self, column: str) -> str:
+                return self._columns[column]
+
+        fake_pandas = ModuleType("pandas")
+        fake_pandas.DataFrame = FakeDataFrame  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "pandas", fake_pandas)
+        monkeypatch.setattr("prefect.cache_policies.STABLE_TRANSFORMS", {})
+
+        policy = Inputs()
+
+        # column ordering is stabilized by the registered transform
+        key = policy.compute_key(
+            task_ctx=None,
+            inputs={"df": FakeDataFrame({"a": "1", "b": "2"})},
+            flow_parameters=None,
+        )
+        other_key = policy.compute_key(
+            task_ctx=None,
+            inputs={"df": FakeDataFrame({"b": "2", "a": "1"})},
+            flow_parameters=None,
+        )
+
+        assert key == other_key
+
+    def test_importing_module_does_not_import_optional_dependencies(
+        self, tmp_path: Path
+    ):
+        # a stub package that fails if imported, to detect an eager import of pandas
+        (tmp_path / "pandas.py").write_text(
+            "raise AssertionError('pandas was eagerly imported')"
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import sys; import prefect.cache_policies;"
+                " assert 'pandas' not in sys.modules",
+            ],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0, result.stderr
+
     def test_subtraction_results_in_new_policy_for_inputs(self):
         policy = Inputs()
         new_policy = policy - "foo"
@@ -147,6 +208,18 @@ class TestInputsPolicy:
             )
             assert new_key == key
 
+    def test_subtraction_preserves_configuration(self):
+        policy = Inputs().configure(
+            key_storage="/path/to/storage",
+            lock_manager="/path/to/locks",
+            isolation_level="SERIALIZABLE",
+        )
+        new_policy = policy - "y"
+        assert new_policy.exclude == ["y"]
+        assert new_policy.key_storage == "/path/to/storage"
+        assert new_policy.lock_manager == "/path/to/locks"
+        assert new_policy.isolation_level == "SERIALIZABLE"
+
 
 class TestCompoundPolicy:
     def test_initializes(self):
@@ -171,6 +244,18 @@ class TestCompoundPolicy:
         assert isinstance(new_policy, CompoundCachePolicy)
         assert policy != new_policy
         assert policy.policies != new_policy.policies
+
+    def test_subtraction_preserves_configuration(self):
+        policy = DEFAULT.configure(
+            key_storage="/path/to/storage",
+            lock_manager="/path/to/locks",
+            isolation_level="SERIALIZABLE",
+        )
+        new_policy = policy - "y"
+        assert isinstance(new_policy, CompoundCachePolicy)
+        assert new_policy.key_storage == "/path/to/storage"
+        assert new_policy.lock_manager == "/path/to/locks"
+        assert new_policy.isolation_level == "SERIALIZABLE"
 
     def test_creation_via_subtraction(self):
         one = DEFAULT

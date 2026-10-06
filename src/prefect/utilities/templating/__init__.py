@@ -83,7 +83,7 @@ def find_placeholders(template: T) -> set[Placeholder]:
         A set of all placeholders in the template
     """
     seed: set[Placeholder] = set()
-    if isinstance(template, (int, float, bool)):
+    if template is None or isinstance(template, (int, float, bool)):
         return seed
     if isinstance(template, str):
         result = PLACEHOLDER_CAPTURE_REGEX.findall(template)
@@ -401,8 +401,15 @@ async def resolve_block_document_references(
         value: Any = data
 
         if len(data) == 1 and "value" in data:
-            # only resolve the value if the keypath is not already pointing to "value"
-            if not (value_keypath and value_keypath[0].startswith("value")):
+            # only resolve the value if the keypath is not already pointing to "value";
+            # a key that merely starts with "value" (e.g. "values") is inside it
+            if not (
+                value_keypath
+                and (
+                    value_keypath[0] == "value"
+                    or value_keypath[0].startswith(("value.", "value["))
+                )
+            ):
                 data = value = value["value"]
 
         if value_keypath:

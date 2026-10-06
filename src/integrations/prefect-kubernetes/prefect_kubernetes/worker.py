@@ -835,7 +835,7 @@ class KubernetesWorker(
     )
     _display_name = "Kubernetes"
     _documentation_url = "https://docs.prefect.io/integrations/prefect-kubernetes"
-    _logo_url = "https://cdn.sanity.io/images/3ugk85nk/production/2d0b896006ad463b49c28aaac14f31e00e32cfab-250x250.png"  # noqa
+    _logo_url = "https://raw.githubusercontent.com/PrefectHQ/prefect/420d0d6a78bb6df1fc18bcf188fdad43c1d22ea9/assets/block-logos/kubernetes.png"  # noqa
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
@@ -855,8 +855,6 @@ class KubernetesWorker(
         Args:
             flow_run: The flow run to execute
             configuration: The configuration to use when executing the flow run
-            task_status: The task status object for the current flow run. If provided,
-                the task will be marked as started.
         """
         logger = self.get_flow_run_logger(flow_run)
         async with self._get_configured_kubernetes_client(configuration) as client:

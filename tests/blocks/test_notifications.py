@@ -1,3 +1,4 @@
+import json
 import logging
 import urllib
 from typing import Type
@@ -485,6 +486,20 @@ class TestMattermostWebhook:
             body="test", title="", notify_type=PREFECT_NOTIFY_TYPE_DEFAULT
         )
 
+    def test_botname_reaches_the_mattermost_payload(self):
+        mm_block = MattermostWebhook(
+            hostname="example.com",
+            token="token",
+            botname="Prefect Bot",
+        )
+
+        with patch("requests.post") as post:
+            post.return_value.status_code = 200
+            list(mm_block._apprise_client)[0].send(body="test")
+
+        payload = json.loads(post.call_args.kwargs["data"])
+        assert payload["username"] == "Prefect Bot"
+
     def test_is_picklable(self):
         block = MattermostWebhook(token="token", hostname="example.com")
         pickled = cloudpickle.dumps(block)
@@ -964,6 +979,37 @@ class TestCustomWebhook:
                 "timeout": {"connect": 10, "pool": 10, "read": 10, "write": 10}
             }
 
+    async def test_json_data_with_null_values(self):
+        with respx.mock(using="httpx") as xmock:
+            xmock.post("https://example.com/")
+
+            custom_block = CustomWebhookNotificationBlock(
+                name="test name",
+                url="https://example.com/",
+                json_data={
+                    "text": "{{body}}",
+                    "metadata": {"optional": None},
+                    "items": [None, "{{name}}"],
+                },
+            )
+            await custom_block.notify("test")
+
+            last_req = xmock.calls.last.request
+            assert (
+                last_req.content
+                == b'{"text":"test","metadata":{"optional":null},"items":[null,"test name"]}'
+            )
+
+    async def test_json_data_with_null_values_still_rejects_unknown_placeholders(
+        self,
+    ):
+        with pytest.raises(KeyError, match="json_data"):
+            CustomWebhookNotificationBlock(
+                name="test name",
+                url="https://example.com/",
+                json_data={"text": "{{unknown}}", "metadata": {"optional": None}},
+            )
+
     async def test_subst_none(self):
         with respx.mock(using="httpx") as xmock:
             xmock.post("https://example.com/")
@@ -1223,6 +1269,8 @@ class TestSendgridEmail:
 
 class TestMicrosoftTeamsWebhook:
     SAMPLE_URL = "https://prod-NO.LOCATION.logic.azure.com:443/workflows/WFID/triggers/manual/paths/invoke?sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SIGNATURE"
+    POWER_AUTOMATE_URL = "https://prod-NO.LOCATION.logic.azure.com:443/powerautomate/automations/direct/workflows/WFID/triggers/manual/paths/invoke?api-version=2022-03-01-preview&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SIGNATURE"
+    POWER_AUTOMATE_URL_WITH_ROUTING_ID = "https://prod-NO.LOCATION.logic.azure.com:443/powerautomate/automations/direct/cu/12/workflows/WFID/triggers/manual/paths/invoke?api-version=2022-03-01-preview&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SIGNATURE"
 
     async def test_notify_async(self):
         with patch("apprise.Apprise", autospec=True) as AppriseMock:
@@ -1274,3 +1322,41 @@ class TestMicrosoftTeamsWebhook:
         pickled = cloudpickle.dumps(block)
         unpickled = cloudpickle.loads(pickled)
         assert isinstance(unpickled, MicrosoftTeamsWebhook)
+
+    async def test_notify_async_with_power_automate_url(self):
+        with patch("apprise.Apprise", autospec=True) as AppriseMock:
+            apprise_instance_mock = AppriseMock.return_value
+            apprise_instance_mock.async_notify = AsyncMock()
+
+            block = MicrosoftTeamsWebhook(url=self.POWER_AUTOMATE_URL)
+            await block.notify("test")
+
+            apprise_instance_mock.add.assert_called_once()
+            _assert_apprise_url_matches(
+                apprise_instance_mock.add.call_args.kwargs["servers"],
+                "workflow://prod-NO.LOCATION.logic.azure.com:443/WFID/SIGNATURE/"
+                "?image=yes&wrap=yes&pa=yes"
+                "&format=markdown&overflow=upstream",
+            )
+            apprise_instance_mock.async_notify.assert_awaited_once_with(
+                body="test", title="", notify_type=PREFECT_NOTIFY_TYPE_DEFAULT
+            )
+
+    async def test_notify_async_with_power_automate_url_with_routing_id(self):
+        with patch("apprise.Apprise", autospec=True) as AppriseMock:
+            apprise_instance_mock = AppriseMock.return_value
+            apprise_instance_mock.async_notify = AsyncMock()
+
+            block = MicrosoftTeamsWebhook(url=self.POWER_AUTOMATE_URL_WITH_ROUTING_ID)
+            await block.notify("test")
+
+            apprise_instance_mock.add.assert_called_once()
+            _assert_apprise_url_matches(
+                apprise_instance_mock.add.call_args.kwargs["servers"],
+                "workflow://prod-NO.LOCATION.logic.azure.com:443/WFID/SIGNATURE/"
+                "?image=yes&wrap=yes&pa=yes&route=12"
+                "&format=markdown&overflow=upstream",
+            )
+            apprise_instance_mock.async_notify.assert_awaited_once_with(
+                body="test", title="", notify_type=PREFECT_NOTIFY_TYPE_DEFAULT
+            )

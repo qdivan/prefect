@@ -429,10 +429,21 @@ class KubernetesJobRun(JobRun[Dict[str, Any]]):
                 **self._kubernetes_job.api_kwargs,
             )
 
+            job_is_terminal = any(
+                condition.type in ("Complete", "Failed") and condition.status == "True"
+                for condition in v1_job.status.conditions or []
+            )
+
             for pod in v1_pod_list.items:
                 pod_name = pod.metadata.name
 
                 if pod.status.phase == "Pending" or pod_name in self.pod_logs.keys():
+                    continue
+
+                # Without a `print_func` to stream with, reading logs returns the
+                # logs written so far, so wait until the job is terminal to capture
+                # everything the pods produced.
+                if print_func is None and not job_is_terminal:
                     continue
 
                 self.logger.info(f"Capturing logs for pod {pod_name!r}.")
@@ -567,7 +578,7 @@ class KubernetesJob(JobBlock):
 
     _block_type_name = "Kubernetes Job"
     _block_type_slug = "k8s-job"
-    _logo_url = "https://cdn.sanity.io/images/3ugk85nk/production/2d0b896006ad463b49c28aaac14f31e00e32cfab-250x250.png"  # noqa: E501
+    _logo_url = "https://raw.githubusercontent.com/PrefectHQ/prefect/420d0d6a78bb6df1fc18bcf188fdad43c1d22ea9/assets/block-logos/kubernetes.png"  # noqa: E501
     _documentation_url = "https://docs.prefect.io/integrations/prefect-kubernetes"  # noqa
 
     async def atrigger(self):
